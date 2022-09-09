@@ -137,7 +137,6 @@ class initialize_WorkChain(WorkChain):
         self.out('ea_id_running', aiida_load_ea_id_running())
 
 
-
 @calcfunction
 def _pack_Structure_to_Dict(**kwargs):
 
@@ -182,6 +181,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
         super().define(spec)
         spec.input("code_string", valid_type=Str, help='label of your \'lammps.optimize\' code')
         spec.input("initial_structures", valid_type=Dict, help='initial structures')
+        spec.input("cwd", valid_type=Dict, help='directories to save resulting files of each structure')
         spec.input('potential', valid_type=LammpsPotential, help='lammps potential')
         spec.input('parameters', valid_type=Dict, help='additional parameters to pass \'lammps.optimize\'')
 
@@ -204,7 +204,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
 
         code_lammps_force = Code.get_from_string(code)
         for _ID, struc_dict in initial_structures_dict.items():
-            _structure = Structure.from_dict(struc_dict["struc"])
+            _structure = Structure.from_dict(struc_dict)
             structure = StructureData(pymatgen=_structure)
 
             builder = code_lammps_force.get_builder()
@@ -233,9 +233,9 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
 
         # check whether the same IDs are come.
         initial_structures_dict = self.inputs.initial_structures.get_dict()
+        cwd_dict = self.inputs.cwd.get_dict()
         structure_id_list = []
-        for _ID, struc_dict in initial_structures_dict.items():
-            cwd = struc_dict["cwd"]
+        for _ID, struc_dict in cwd_dict.items():
             ID = _ID.replace(ID_PREFIX, "")
             structure_id_list.append(ID)
         calculations_id_list = []
@@ -257,7 +257,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
                     # content = folderdata.get_object_content(filename)
                     ID = key.replace(SIMULATOR_PREFIX, "")
                     ID_key = f'{ID_PREFIX}{ID}'
-                    cwd = initial_structures_dict[ID_key]["cwd"]
+                    cwd = cwd_dict[ID_key]
                     os.makedirs(cwd, exist_ok=True)
 
                     # copy content from folderdata.filename to cwd.filename
@@ -272,7 +272,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
 
         # change stat_job
         for _ID, struc_dict in initial_structures_dict.items():
-            cwd = struc_dict["cwd"]
+            cwd = cwd_dict[_ID]
             os.makedirs(cwd, exist_ok=True)
             filepath = os.path.join(cwd, 'stat_job')
             with open(filepath, "r") as f:
@@ -302,7 +302,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
 
                 ID = key.replace(SIMULATOR_PREFIX, "")
                 ID_key = f"{ID_PREFIX}{ID}"
-                cwd = initial_structures_dict[ID_key]["cwd"]
+                cwd = cwd_dict[ID_key]
                 # write lammps final structure to cwd+log.struc
                 poscar = Poscar(structure.get_pymatgen())
                 poscar.write_file(os.path.join(cwd, "log.struc"))
