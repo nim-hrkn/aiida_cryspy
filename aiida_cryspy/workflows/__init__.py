@@ -1,1 +1,1 @@
-from .cryspy_workflows import initial_structure_WorkChain, optimization_simulator_lammps_WorkChain
+from .cryspy_workflows import initialize_WorkChain, optimization_simulator_lammps_WorkChain

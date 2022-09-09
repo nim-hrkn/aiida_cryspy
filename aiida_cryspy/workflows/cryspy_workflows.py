@@ -1,16 +1,15 @@
 import os
-import io
 import numpy as np
 
-from pymatgen.io.vasp.inputs import Poscar
 
 from aiida.plugins import DataFactory
 from aiida.orm import Code
-from aiida.orm import Str, Dict, Int, List, Float
+from aiida.orm import Str, Dict, List, Int
 from aiida.engine import calcfunction, WorkChain
 
-from CrySPY.gen_struc.random.gen_pyxtal import Rnd_struc_gen_pyxtal
-
+from CrySPY.IO import read_input as rin
+from pymatgen.io.vasp.inputs import Poscar
+from pymatgen.core import Structure
 
 # load types
 StructureData = DataFactory('structure')
@@ -22,90 +21,132 @@ TrajectoryData = DataFactory('array.trajectory')
 
 
 SIMULATOR_PREFIX = 'simulator_'
+ID_PREFIX = 'ID_'
 
 
-@calcfunction
-def _pack_Structure_to_folder(**kwargs):
-    prefix = SIMULATOR_PREFIX
-    filename = '{key}.poscar'
-    final_structure_folder = FolderData()
-    for label, structure in kwargs.items():
-        py_structure = structure.get_pymatgen()
-        poscar = Poscar(py_structure)
-        handler = io.StringIO(str(poscar))
-        key = label.replace(prefix, "")
-        _filename = filename.replace('{key}', key)
-        final_structure_folder.put_object_from_filelike(handler, _filename)
-    return final_structure_folder
-
-
-class initial_structure_WorkChain(WorkChain):
-    """parallen execution of lammps.force
+class initialize_WorkChain(WorkChain):
+    """start.initialize()
     """
 
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input("tot_struc", valid_type=Int, help='number of strctures.')
-        spec.input("natot", valid_type=Int, help='summation of the number of atoms in the cell.')
-        spec.input('atype', valid_type=List, help='atomic types.')
-        spec.input('nat', valid_type=List, help='number of each atoms.')
-        spec.input('vol_factor', valid_type=List, help='volume factor of each atoms.')
-        spec.input('spgnum', valid_type=Str, help='all for all the symmetries.')
-        spec.input('symprec', valid_type=Float, help='symprec for spglib.')
-        spec.input('params', valid_type=Dict, help='additional parameters')
+        spec.input("cryspy_in", valid_type=SinglefileData, help='cryspy_in. (temporary implementation)')
 
         spec.outline(
-            cls.generate_structures,
-            cls.make_folderdata,
+            cls.start_initialize,
+            cls.make_aiidadata,
         )
-        spec.output("structures", valid_type=FolderData, help='optimized structures')
+        spec.output("init_struc", valid_type=Dict, help='initial structures')
+        spec.output("opt_struc", valid_type=Dict, help='optimized structures')
+        spec.output("rstl_data", valid_type=Dict, help='rst_data')
+        spec.output("ea_info", valid_type=Dict, help='ea_info')
+        spec.output("ea_origin", valid_type=Dict, help='ea_origin')
+        spec.output("ea_id_gen", valid_type=Int, help='ea_origin')
+        spec.output("ea_id_queueing", valid_type=List, help='ea_origin')
+        spec.output("ea_id_running", valid_type=List, help='ea_origin')
 
-    def generate_structures(self):
-        tot_struc = self.inputs.tot_struc.value
-        natot = self.inputs.natot.value
-        atype = self.inputs.atype.get_list()
-        nat = self.inputs.nat.get_list()
-        vol_factor = self.inputs.vol_factor.get_list()
-        spgnum = self.inputs.spgnum.value
-        symprec = self.inputs.symprec.value
-        key = "vol_sigma"
-        if key in self.inputs.params.get_dict():
-            vol_sigma = self.inputs.params[key]
-        else:
-            vol_sigma = None
-        key = "mindist"
-        if key in self.inputs.params.get_dict():
-            mindist = self.inputs.params[key]
-        else:
-            mindist = None
-        key = "vol_mu"
-        if key in self.inputs.params.get_dict():
-            vol_mu = self.inputs.params[key]
-        else:
-            vol_mu = None
+    def start_initialize(self):
+        from CrySPY.start import cryspy_init
+        cryspy_init.initialize(self.inputs.cryspy_in)
 
-        rsgx = Rnd_struc_gen_pyxtal(natot=natot, atype=atype,
-                                    nat=nat, vol_factor=vol_factor,
-                                    vol_mu=vol_mu, vol_sigma=vol_sigma,
-                                    mindist=mindist,
-                                    spgnum=spgnum, symprec=symprec)
-        rsgx.gen_struc(nstruc=tot_struc, id_offset=0,
-                       init_pos_path=None)
-        self.ctx.init_struc_data = rsgx.init_struc_data
+    def make_aiidadata(self):
+        """must handle
+        EA_data.pkl  
+        EA_id_data.pkl  
+        init_struc_data.pkl  
+        opt_struc_data.pkl  
+        rslt_data.pkl
+        """
+        @calcfunction
+        def aiida_load_init_struc():
+            from CrySPY.IO.pkl_data import load_init_struc
+            struc_dict = load_init_struc()
+            structures = {}
+            for _i, value in struc_dict.items():
+                content = value.as_dict()
+                key = f'ID_{_i}'
+                structures[key] = content
+            return Dict(dict=structures)
+        self.out('init_struc', aiida_load_init_struc())
 
-    def make_folderdata(self):
-        init_struc_data = self.ctx.init_struc_data
+        @calcfunction
+        def aiida_load_opt_struc():
+            from CrySPY.IO.pkl_data import load_opt_struc
+            struc_dict = load_opt_struc()
+            structures = {}
+            for _i, value in struc_dict.items():
+                content = value.as_dict()
+                key = f'ID_{_i}'
+                structures[key] = content
+            return Dict(dict=structures)
+        self.out('opt_struc', aiida_load_opt_struc())
 
-        structures = {}
-        for label in init_struc_data:
-            key = SIMULATOR_PREFIX+str(label)
-            structure = init_struc_data[label]
-            structures[key] = StructureData(pymatgen=structure)
+        @calcfunction
+        def aiida_load_rslt():
+            from CrySPY.IO.pkl_data import load_rslt
+            rstl_data_dic = {}
+            rstl_data = load_rslt()
+            for key in rstl_data.columns:
+                rstl_data_dic[key] = rstl_data[key].values.tolist()
+            return Dict(dict=rstl_data_dic)
+        self.out('rstl_data', aiida_load_rslt())
 
-        final_structure_folder = _pack_Structure_to_folder(**structures)
+        @calcfunction
+        def aiida_load_ea_info():
+            from CrySPY.IO.pkl_data import load_ea_data
+            ea_data = {}
+            elite_struc, elite_fitness, ea_info, ea_origin = load_ea_data()
+            ea_info_dic = {}
+            for key in ea_info.columns:
+                ea_info_dic[key] = ea_info[key].values.tolist()
+            return Dict(dict=ea_info_dic)
 
-        self.out('structures', final_structure_folder)
+        @calcfunction
+        def aiida_load_ea_origin():
+            from CrySPY.IO.pkl_data import load_ea_data
+            ea_data = {}
+            elite_struc, elite_fitness, ea_info, ea_origin = load_ea_data()
+
+            ea_origin_dic = {}
+            for key in ea_origin.columns:
+                ea_origin_dic[key] = ea_origin[key].values.tolist()
+            return Dict(dict=ea_origin_dic)
+        self.out('ea_info', aiida_load_ea_info())
+        self.out('ea_origin', aiida_load_ea_origin())
+
+        @calcfunction
+        def aiida_load_ea_id_gen():
+            from CrySPY.IO.pkl_data import load_ea_id
+            gen, id_queueing, id_running = load_ea_id()
+            return Int(gen)
+
+        @calcfunction
+        def aiida_load_ea_id_queueing():
+            from CrySPY.IO.pkl_data import load_ea_id
+            gen, id_queueing, id_running = load_ea_id()
+            return List(list=id_queueing)
+
+        @calcfunction
+        def aiida_load_ea_id_running():
+            from CrySPY.IO.pkl_data import load_ea_id
+            gen, id_queueing, id_running = load_ea_id()
+            return List(list=id_running)
+        self.out('ea_id_gen', aiida_load_ea_id_gen())
+        self.out('ea_id_queueing', aiida_load_ea_id_queueing())
+        self.out('ea_id_running', aiida_load_ea_id_running())
+
+
+
+@calcfunction
+def _pack_Structure_to_Dict(**kwargs):
+
+    final_structures = {}
+    for label, structure in kwargs.items():
+        py_structure = structure.get_pymatgen()
+        struc_dic = py_structure.as_dict()
+        final_structures[label] = struc_dic
+    return Dict(dict=final_structures)
 
 
 @calcfunction
@@ -140,7 +181,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
     def define(cls, spec):
         super().define(spec)
         spec.input("code_string", valid_type=Str, help='label of your \'lammps.optimize\' code')
-        spec.input("initial_structures", valid_type=FolderData, help='folder containing initial structures')
+        spec.input("initial_structures", valid_type=Dict, help='initial structures')
         spec.input('potential', valid_type=LammpsPotential, help='lammps potential')
         spec.input('parameters', valid_type=Dict, help='additional parameters to pass \'lammps.optimize\'')
 
@@ -152,24 +193,19 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
             cls.inspect_workchains
         )
         spec.output("results", valid_type=Dict)
-        spec.output("final_structures", valid_type=FolderData, help='optimized structures')
+        spec.output("final_structures", valid_type=Dict, help='optimized structures')
 
     def submit_workchains(self):
-        structure_filenames = self.inputs.initial_structures.list_object_names()
-        structure_folder = self.inputs.initial_structures
+        initial_structures_dict = self.inputs.initial_structures.get_dict()
         potential = self.inputs.potential
         code = self.inputs.code_string.value
         metadata_options = self.inputs.options.get_dict()
         parameters = self.inputs.parameters
 
         code_lammps_force = Code.get_from_string(code)
-
-        for filename in structure_filenames:
-            head, ext = os.path.splitext(filename)
-            with structure_folder.open(filename) as handle:
-                from ase.io import read
-                structure = read(handle)
-            structure = StructureData(ase=structure)
+        for _ID, struc_dict in initial_structures_dict.items():
+            _structure = Structure.from_dict(struc_dict["struc"])
+            structure = StructureData(pymatgen=_structure)
 
             builder = code_lammps_force.get_builder()
             builder.structure = structure
@@ -179,9 +215,12 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
 
             future = self.submit(builder)  # or self.submit
 
-            key = f'simulator_{head}'
+            head = _ID.replace(ID_PREFIX, "")
+            key = f'{SIMULATOR_PREFIX}{head}'
+
             self.to_context(**{key: future})
-            # self.to_context(simulator=append_(future))
+
+            # self.to_context(simulator=append_(future)) # It can't send ID.
             # self.to_context(simulator=append_({key: future})) # NG way.
 
     def inspect_workchains(self):
@@ -192,6 +231,59 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
             if key.startswith(SIMULATOR_PREFIX):
                 assert values.is_finished_ok
 
+        # check whether the same IDs are come.
+        initial_structures_dict = self.inputs.initial_structures.get_dict()
+        structure_id_list = []
+        for _ID, struc_dict in initial_structures_dict.items():
+            cwd = struc_dict["cwd"]
+            ID = _ID.replace(ID_PREFIX, "")
+            structure_id_list.append(ID)
+        calculations_id_list = []
+        for key in calculations:
+            if key.startswith(SIMULATOR_PREFIX):
+                key = key.replace(SIMULATOR_PREFIX, "")
+                calculations_id_list.append(key)
+        structure_id_list = set(structure_id_list)
+        calculations_id_list = set(calculations_id_list)
+        if structure_id_list != calculations_id_list:
+            raise ValueError('inconsistent ID')
+
+        # retrieve all the files
+        for key in calculations:
+            if key.startswith(SIMULATOR_PREFIX):
+                folderdata = calculations[key].outputs.retrieved
+                # copy all
+                for filename in folderdata.list_object_names():
+                    # content = folderdata.get_object_content(filename)
+                    ID = key.replace(SIMULATOR_PREFIX, "")
+                    ID_key = f'{ID_PREFIX}{ID}'
+                    cwd = initial_structures_dict[ID_key]["cwd"]
+                    os.makedirs(cwd, exist_ok=True)
+
+                    # copy content from folderdata.filename to cwd.filename
+                    content = None
+                    with folderdata.open(filename, "rb") as input_hander:
+                        content = input_hander.read()
+                    if filename == "_scheduler-stdout.txt":
+                        filename = "out.lammps"
+                    filepath = os.path.join(cwd, filename)
+                    with open(filepath, "wb") as f:
+                        f.write(content)
+
+        # change stat_job
+        for _ID, struc_dict in initial_structures_dict.items():
+            cwd = struc_dict["cwd"]
+            os.makedirs(cwd, exist_ok=True)
+            filepath = os.path.join(cwd, 'stat_job')
+            with open(filepath, "r") as f:
+                content = f.read().splitlines()
+
+            content2 = [content[0], content[1]]
+            content2.append('done')
+            with open(filepath, "w") as f:
+                f.write("\n".join(content2))
+
+        # process parsed items
         results = {}
         for key in calculations:
             if key.startswith(SIMULATOR_PREFIX):
@@ -208,6 +300,13 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
                 structure = calculations[key].outputs.structure
                 structures[key] = structure
 
-        final_structure_folder = _pack_Structure_to_folder(**structures)
+                ID = key.replace(SIMULATOR_PREFIX, "")
+                ID_key = f"{ID_PREFIX}{ID}"
+                cwd = initial_structures_dict[ID_key]["cwd"]
+                # write lammps final structure to cwd+log.struc
+                poscar = Poscar(structure.get_pymatgen())
+                poscar.write_file(os.path.join(cwd, "log.struc"))
 
-        self.out('final_structures', final_structure_folder)
+        final_structures = _pack_Structure_to_Dict(**structures)
+
+        self.out('final_structures', final_structures)

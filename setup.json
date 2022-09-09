@@ -3,7 +3,7 @@
     "version" : "0.1.0",
     "entry_points" : {
         "aiida.workflows": [
-            "cryspy.random_structures = aiida_cryspy.workflows.cryspy_workflows: initial_structure_WorkChain",
+            "cryspy.initial_structures = aiida_cryspy.workflows.cryspy_workflows: initialize_WorkChain",
             "cryspy.optimize_structures_lammps = aiida_cryspy.workflows.cryspy_workflows: optimization_simulator_lammps_WorkChain"
         ]
     }
