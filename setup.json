@@ -1,10 +1,15 @@
 {
     "name" : "aiida-cryspy",
     "version" : "0.1.0",
+    "install_requires": ["aiida-dataframe"],
     "entry_points" : {
         "aiida.workflows": [
             "cryspy.initial_structures = aiida_cryspy.workflows.cryspy_workflows: initialize_WorkChain",
             "cryspy.optimize_structures_lammps = aiida_cryspy.workflows.cryspy_workflows: optimization_simulator_lammps_WorkChain"
+        ],
+        "aiida.data": [
+            "cryspy.pystructuredict = aiida_cryspy.data.PyStructureDicData: PyStructureDictData",
+            "cryspy.configparser = aiida_cryspy.data.configparser: ConfigParserData"
         ]
     }
 }
