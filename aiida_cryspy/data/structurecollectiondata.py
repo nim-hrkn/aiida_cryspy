@@ -2,7 +2,7 @@ from aiida.orm import Dict
 from pymatgen.core import Structure
 
 
-class PyStructureDictData(Dict):
+class StructureCollectionData(Dict):
     """
     structures is a dict of pymatgen.core.Structure.,
     structures= {0: pymatgen.core.Structure, 1: pymatgen.core.Structure, ...}    
@@ -31,7 +31,7 @@ class PyStructureDictData(Dict):
             self.set_dict(struc_dict_dict)
         else:
             if structures is not None:
-                self.set_pystructuredict(structures)
+                self.set_structurecollection(structures)
 
     def _internal_validate(self, structures: dict):
         """
@@ -56,7 +56,7 @@ class PyStructureDictData(Dict):
             if not isinstance(value, Structure):
                 raise TypeError('structures.values must be a type of Structure.')
 
-    def set_pystructuredict(self, structures: dict):
+    def set_structurecollection(self, structures: dict):
         """
         set StrucDict
 
@@ -72,7 +72,7 @@ class PyStructureDictData(Dict):
             struc_dict_dict[key] = struc
         self.set_dict(dictionary=struc_dict_dict)
 
-    def get_pystructuredict(self) -> dict:
+    def get_structurecollection(self) -> dict:
         structuresdic = self.get_dict()
         _structuresdic = {}
         for key, value in structuresdic.items():
@@ -82,12 +82,12 @@ class PyStructureDictData(Dict):
         return _structuresdic
 
     @property
-    def pystructuredict(self) -> dict:
-        return self.get_pystructuredict()
+    def structurecollection(self) -> dict:
+        return self.get_structurecollection()
 
-    @pystructuredict.setter
-    def pystructuredict(self, structures: dict) -> None:
+    @structurecollection.setter
+    def structurecollection(self, structures: dict) -> None:
         """
         Update PyStructureDict
         """
-        self.set_pystructuredict(structures)
+        self.set_structurecollection(structures)

@@ -11,3 +11,4 @@ if __name__ == '__main__':
           packages=find_packages(),
           **kwargs)
 
+    # aiida-dataframe is necessary.

@@ -5,12 +5,15 @@
     "entry_points" : {
         "aiida.workflows": [
             "cryspy.initial_structures = aiida_cryspy.workflows.initialize_WorkChain: initialize_WorkChain",
-            "cryspy.optimize_structures_lammps = aiida_cryspy.workflows.optimization_simulator_lammps_WorkChain: optimization_simulator_lammps_WorkChain"
+            "cryspy.optimize_structures_lammps = aiida_cryspy.workflows.optimization_simulator_lammps_WorkChain: optimization_simulator_lammps_WorkChain",
+            "cryspy.next_sg = aiida_cryspy.workflows.next_sg_WorkChain: next_sg_WorkChain"
         ],
         "aiida.data": [
-            "cryspy.pystructuredict = aiida_cryspy.data.PyStructureDicData: PyStructureDictData",
-            "cryspy.configparser = aiida_cryspy.data.configparser: ConfigParserData",
-            "cryspy.dataframe = aiida_cryspy.data.dataframedata: DataframeData"
+            "cryspy.structurecollection = aiida_cryspy.data.structurecollectiondata: StructureCollectionData",
+            "cryspy.configparser = aiida_cryspy.data.configparserdata: ConfigParserData",
+            "cryspy.dataframe = aiida_cryspy.data.dataframedata: DataframeData",
+            "cryspy.ea_data = aiida_cryspy.data.eadata: EAData",
+            "cryspy.ea_id_data = aiida_cryspy.data.eaiddata: EAidData"
         ]
     }
 }
