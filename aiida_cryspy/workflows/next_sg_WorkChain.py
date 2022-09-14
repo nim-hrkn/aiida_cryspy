@@ -13,7 +13,12 @@ EAidData = DataFactory('cryspy.ea_id_data')
 
 
 class next_sg_WorkChain(WorkChain):
+    """next_sg()
 
+    Q. Why are the initial_strucutures as input  necessary?
+    A. It is to add new structures to the initial_structures.
+
+    """
     @classmethod
     def define(cls, spec):
         super().define(spec)
@@ -30,6 +35,7 @@ class next_sg_WorkChain(WorkChain):
         spec.output('ea_id_data', valid_type=EAidData)
         spec.output('ea_data', valid_type=EAData)
         spec.output('rslt_data', valid_type=PandasFrameData)
+        spec.output('initial_structures', valid_type=StructurecollectionData)
 
     def call_next_sg(self):
 
@@ -45,7 +51,7 @@ class next_sg_WorkChain(WorkChain):
                         rslt_data, ea_id_data
                         )
 
-        _, ea_id_data, ea_data, rslt_data = jobs.next_sg(ea_data)
+        _, ea_id_data, ea_data, rslt_data, init_struc_data = jobs.next_sg(ea_data)
 
         ea_id_data_node = EAidData(ea_id_data)
         ea_id_data_node.store()
@@ -53,7 +59,11 @@ class next_sg_WorkChain(WorkChain):
         ea_data_node.store()
         rslt_data_node = PandasFrameData(rslt_data)
         rslt_data_node.store()
+        
+        struc_node = StructurecollectionData(init_struc_data)
+        struc_node.store()
 
         self.out("ea_id_data", ea_id_data_node)
         self.out("ea_data", ea_data_node)
         self.out("rslt_data", rslt_data_node)
+        self.out('initial_structures', struc_node)

@@ -103,7 +103,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
 
             # head = _ID.replace(ID_PREFIX, "")
             key = f'{SIMULATOR_PREFIX}{_ID}'
-
+            print("submit key", key)
             self.to_context(**{key: future})
 
             # self.to_context(simulator=append_(future)) # It can't send ID.
@@ -131,6 +131,8 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
         structure_id_list = set(structure_id_list)
         calculations_id_list = set(calculations_id_list)
         if structure_id_list != calculations_id_list:
+            print("calculations_id_list",calculations_id_list)
+            print("structure_id_list",structure_id_list)
             raise ValueError('inconsistent ID')
 
         # retrieve all the files
