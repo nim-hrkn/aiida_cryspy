@@ -6,7 +6,8 @@
         "aiida.workflows": [
             "cryspy.initial_structures = aiida_cryspy.workflows.initialize_WorkChain: initialize_WorkChain",
             "cryspy.optimize_structures_lammps = aiida_cryspy.workflows.optimization_simulator_lammps_WorkChain: optimization_simulator_lammps_WorkChain",
-            "cryspy.next_sg = aiida_cryspy.workflows.next_sg_WorkChain: next_sg_WorkChain"
+            "cryspy.next_sg = aiida_cryspy.workflows.next_sg_WorkChain: next_sg_WorkChain",
+            "cryspy.select_structures = aiida_cryspy.workflows.select_structure_to_run_WorkChain: select_structure_to_run_WorkChain"
         ],
         "aiida.data": [
             "cryspy.structurecollection = aiida_cryspy.data.structurecollectiondata: StructureCollectionData",

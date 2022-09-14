@@ -3,7 +3,6 @@
 from aiida.engine import WorkChain
 from aiida.plugins import DataFactory
 
-from CrySPY.IO import io_stat
 from CrySPY.job.ctrl_job import Ctrl_job
 
 PandasFrameData = DataFactory('dataframe.frame')
