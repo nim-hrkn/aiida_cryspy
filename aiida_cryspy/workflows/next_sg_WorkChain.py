@@ -2,6 +2,7 @@
 
 from aiida.engine import WorkChain
 from aiida.plugins import DataFactory
+from aiida.orm import Str
 
 from CrySPY.job.ctrl_job import Ctrl_job
 
@@ -28,6 +29,7 @@ class next_sg_WorkChain(WorkChain):
         spec.input("ea_id_data", valid_type=EAidData, help='ea_id_data')
         spec.input("ea_data", valid_type=EAData, help='ea_data')
         spec.input("stat", valid_type=ConfigparserData, help='cryspy_in content')
+        spec.input('cryspy_in', valid_type=(Str, ConfigparserData), help='cryspy_in')
 
         spec.outline(
             cls.call_next_sg
@@ -47,8 +49,15 @@ class next_sg_WorkChain(WorkChain):
         ea_id_data = self.inputs.ea_id_data.ea_id_data
         ea_data = self.inputs.ea_data.ea_data
         stat = self.inputs.stat.configparser
+        cryspy_in_node = self.inputs.cryspy_in
+        if isinstance(cryspy_in_node, Str):
+            cryspy_in = cryspy_in_node.value
+        elif isinstance(cryspy_in_node, ConfigparserData):
+            cryspy_in = cryspy_in_node.configparser
+        else:
+            raise TypeError(f'internal error, unknown type of cryspy_in {type(cryspy_in)}')
 
-        jobs = Ctrl_job(stat, initial_structures,
+        jobs = Ctrl_job(cryspy_in, stat, initial_structures,
                         opt_struc,
                         rslt_data, ea_id_data,
                         )

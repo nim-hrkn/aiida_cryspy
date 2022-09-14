@@ -42,7 +42,7 @@ class initialize_WorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input("cryspy_in", valid_type=Str, help='cryspy_in. (temporary implementation)')
+        spec.input("cryspy_in", valid_type=(Str, ConfigparserData), help='cryspy_in. (temporary implementation)')
 
         spec.outline(
             cls.call_cryspy_initialize
@@ -56,8 +56,12 @@ class initialize_WorkChain(WorkChain):
 
     def call_cryspy_initialize(self):
         from CrySPY.start import cryspy_init
-        init_struc_data, opt_struc_data, stat, rslt_data, ea_id_data, ea_data = cryspy_init.initialize(
-            self.inputs.cryspy_in.value)
+        if isinstance(self.inputs.cryspy_in, ConfigparserData):
+            init_struc_data, opt_struc_data, stat, rslt_data, ea_id_data, ea_data = cryspy_init.initialize(
+                self.inputs.cryspy_in.configparser)
+        elif isinstance(self.inputs.cryspy_in, Str):
+            init_struc_data, opt_struc_data, stat, rslt_data, ea_id_data, ea_data = cryspy_init.initialize(
+                self.inputs.cryspy_in.value)
 
         pystructuredict = StructurecollectionData(init_struc_data)
         pystructuredict.store()
