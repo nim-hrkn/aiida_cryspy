@@ -52,10 +52,11 @@ class initialize_WorkChain(WorkChain):
         spec.output('rslt_data', valid_type=PandasFrameData, help='summary dataframe')
         spec.output('ea_id_data', valid_type=EAidData, help='cryspy ea_id_data')
         spec.output('ea_data', valid_type=EAData, help='cryspy ea_data')
+        spec.output('stat', valid_type=ConfigparserData, help='cryspy_in content')
 
     def call_cryspy_initialize(self):
         from CrySPY.start import cryspy_init
-        init_struc_data, opt_struc_data, _, rslt_data, ea_id_data, ea_data = cryspy_init.initialize(
+        init_struc_data, opt_struc_data, stat, rslt_data, ea_id_data, ea_data = cryspy_init.initialize(
             self.inputs.cryspy_in.value)
 
         pystructuredict = StructurecollectionData(init_struc_data)
@@ -74,3 +75,8 @@ class initialize_WorkChain(WorkChain):
         ea_node = EAData(ea_data)
         ea_node.store()
         self.out('ea_data', ea_node)
+
+        stat = ConfigparserData(stat)
+        stat.store()
+        self.out('stat', stat)
+        
