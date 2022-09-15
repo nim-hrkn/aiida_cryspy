@@ -12,6 +12,7 @@ StructurecollectionData = DataFactory('cryspy.structurecollection')
 EAData = DataFactory('cryspy.ea_data')
 EAidData = DataFactory('cryspy.ea_id_data')
 RSidData = DataFactory('cryspy.rs_id_data')
+BOidData = DataFactory('cryspy.bo_id_data')
 
 ConfigparserData = DataFactory('cryspy.configparser')
 
@@ -20,7 +21,7 @@ ConfigparserData = DataFactory('cryspy.configparser')
 def generate_rlst(all_initial_structures_node: StructurecollectionData,
                   all_optimized_structures_node: StructurecollectionData,
                   optimize_result: Dict,
-                  id_data_node: Union[RSidData, EAidData],
+                  id_data_node: Union[RSidData, EAidData, BOidData],
                   rslt_data_node: PandasFrameData,
                   stat_node: ConfigparserData):
     init_struc_data = all_initial_structures_node.structurecollection
@@ -33,6 +34,9 @@ def generate_rlst(all_initial_structures_node: StructurecollectionData,
     elif isinstance(id_data_node, RSidData):
         gen = 1
         algo = "RS"
+    elif isinstance(id_data_node, BOidData):
+        gen = id_data_node.bo_id_data[0]
+        algo = "BO"
     else:
         raise TypeError(f'unknown type for id_data_node, type={type(id_data_node)}')
     magmon = None
@@ -60,6 +64,9 @@ def generate_rlst(all_initial_structures_node: StructurecollectionData,
                    energy, magmon, check_opt]
         elif algo == "RS":
             row = [in_spg[1], in_spg[0], opt_spg[1], opt_spg[0],
+                   energy, magmon, check_opt]
+        elif algo == "BO":
+            row = [gen, in_spg[1], in_spg[0], opt_spg[1], opt_spg[0],
                    energy, magmon, check_opt]
         rslt_data.loc[i] = row
 

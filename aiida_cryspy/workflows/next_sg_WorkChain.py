@@ -8,9 +8,12 @@ from CrySPY.job.ctrl_job import Ctrl_job
 
 PandasFrameData = DataFactory('dataframe.frame')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
+
 EAData = DataFactory('cryspy.ea_data')
+BOData = DataFactory('cryspy.bo_data')
+
 EAidData = DataFactory('cryspy.ea_id_data')
-RSidData = DataFactory('cryspy.rs_id_data')
+BOidData = DataFactory('cryspy.bo_id_data')
 
 ConfigparserData = DataFactory('cryspy.configparser')
 
@@ -28,39 +31,71 @@ class next_sg_WorkChain(WorkChain):
         spec.input("initial_structures", valid_type=StructurecollectionData, help='initial structures')
         spec.input("optimized_structures", valid_type=StructurecollectionData, help='optimized structures')
         spec.input("rslt_data", valid_type=PandasFrameData, help='summary data')
-        spec.input("id_data", valid_type=EAidData, help='id_data')
-        spec.input("detail_data", valid_type=EAData, help='detail_data')
+        spec.input("id_data", valid_type=(EAidData, BOidData), help='id_data')
+        spec.input("detail_data", valid_type=(EAData, BOData), help='detail_data')
         spec.input("stat", valid_type=ConfigparserData, help='cryspy_in content')
         spec.input('cryspy_in', valid_type=(Str, ConfigparserData), help='cryspy_in')
 
         spec.outline(
+            cls.validate_inputdata,
             cls.call_next_sg
         )
 
-        spec.output('id_data', valid_type=EAidData)
-        spec.output('detail_data', valid_type=EAData)
+        spec.output('id_data', valid_type=(EAidData, BOidData))
+        spec.output('detail_data', valid_type=(EAData, BOData))
         spec.output('rslt_data', valid_type=PandasFrameData)
         spec.output('initial_structures', valid_type=StructurecollectionData)
         spec.output("stat", valid_type=ConfigparserData)
+
+    def validate_inputdata(self):
+        id_data = self.inputs.id_data
+        detail_data = self.inputs.detail_data
+        # both data must be consistent
+        if isinstance(id_data, EAidData):
+            algo = "EA"
+        elif isinstance(id_data, BOidData):
+            algo = "BO"
+        else:
+            raise TypeError(f'unknown type for id_data. type={type(id_data)}')
+
+        if isinstance(detail_data, EAData):
+            algo_data = "EA"
+        elif isinstance(detail_data, BOData):
+            algo_data = "BO"
+        else:
+            raise TypeError(f'unknown type for detail_data. type={type(detail_data)}')
+
+        if algo != algo_data:
+            raise TypeError(f'type(id_data) != type(detail_data), type={type(id_data)}, type={type(detail_data)}')
+        self.ctx.algo = algo
 
     def call_next_sg(self):
 
         initial_structures = self.inputs.initial_structures.structurecollection
         opt_struc = self.inputs.optimized_structures.structurecollection
         rslt_data = self.inputs.rslt_data.df
+        algo = self.ctx.algo
 
         id_data = self.inputs.id_data
         if isinstance(id_data, EAidData):
             algo = 'EA'
             id_data = id_data.ea_id_data
+        elif isinstance(id_data, BOidData):
+            algo = "BO"
+            id_data = id_data.bo_id_data
         # the other types are added.
         else:
             raise TypeError(f'internal error: unknown type for id_data, type={type(id_data)}')
+
         if algo == "EA":
             detail_data = self.inputs.detail_data.ea_data
+        # algo=="RS" doesn't come to this function.
+        elif algo == "BO":
+            detail_data = self.inputs.detail_data.bo_data
         # the other types are added.
         else:
             raise TypeError(f'internal error: unknown type for id_data, type={type(id_data)}')
+
         stat = self.inputs.stat.configparser
         cryspy_in_node = self.inputs.cryspy_in
         if isinstance(cryspy_in_node, Str):
@@ -72,19 +107,32 @@ class next_sg_WorkChain(WorkChain):
 
         jobs = Ctrl_job(cryspy_in, stat, initial_structures,
                         opt_struc,
-                        rslt_data, id_data,
+                        rslt_data, id_data, detail_data
                         )
 
-        stat, id_data, detail_data, rslt_data, init_struc_data = jobs.next_sg(detail_data)
+        if algo == "BO":
+            # BO doesn't increase structures.
+            stat, id_data, detail_data, rslt_data, _ = jobs.next_sg()
+        else:
+            stat, id_data, detail_data, rslt_data, init_struc_data = jobs.next_sg()
 
-        id_data_node = EAidData(id_data)
-        id_data_node.store()
-        detail_data_node = EAData(detail_data)
-        detail_data_node.store()
+        if algo == "EA":
+            id_data_node = EAidData(id_data)
+            id_data_node.store()
+            detail_data_node = EAData(detail_data)
+            detail_data_node.store()
+            struc_node = StructurecollectionData(init_struc_data)
+            struc_node.store()
+        elif algo == "BO":
+            id_data_node = BOidData(id_data)
+            id_data_node.store()
+            detail_data_node = BOData(detail_data)
+            detail_data_node.store()
+            struc_node = self.inputs.initial_structures  # the same node
+
         rslt_data_node = PandasFrameData(rslt_data)
         rslt_data_node.store()
-        struc_node = StructurecollectionData(init_struc_data)
-        struc_node.store()
+
         stat_node = ConfigparserData(stat)
         stat_node.store()
 

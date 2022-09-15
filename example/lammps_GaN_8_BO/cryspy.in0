@@ -1,0 +1,31 @@
+[basic]
+algo = BO
+calc_code = LAMMPS
+tot_struc = 32
+nstage = 1
+njob = 8
+jobcmd = bash
+jobfile = job_cryspy
+
+[structure]
+natot = 8
+atype = Ga N
+nat = 4 4
+
+[LAMMPS]
+lammps_infile = in.lammps
+lammps_outfile = out.lammps
+lammps_data = structure.data
+lammps_potential = GaN.tersoff
+
+[BO]
+nselect_bo = 8
+dscrpt = FP
+score = TS
+fp_rmin = 0.5
+fp_rmax = 5.0
+fp_npoints = 20
+fp_sigma = 1.0
+
+[option]
+

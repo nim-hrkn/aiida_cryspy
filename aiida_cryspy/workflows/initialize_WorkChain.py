@@ -19,9 +19,10 @@ PandasFrameData = DataFactory('dataframe.frame')
 ConfigparserData = DataFactory('cryspy.configparser')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
 EAData = DataFactory('cryspy.ea_data')
+BOData = DataFactory('cryspy.bo_data')
 EAidData = DataFactory('cryspy.ea_id_data')
 RSidData = DataFactory('cryspy.rs_id_data')
-
+BOidData = DataFactory('cryspy.bo_id_data')
 
 SIMULATOR_PREFIX = 'simulator_'
 ID_PREFIX = 'ID_'
@@ -51,8 +52,8 @@ class initialize_WorkChain(WorkChain):
 
         spec.output("init_struc", valid_type=StructurecollectionData, help='initial structures')
         spec.output('rslt_data', valid_type=PandasFrameData, help='summary dataframe')
-        spec.output('id_data', valid_type=(RSidData, EAidData), help='cryspy ea_id_data')
-        spec.output('detail_data', valid_type=EAData, help='cryspy ea_data')
+        spec.output('id_data', valid_type=(RSidData, EAidData, BOidData), help='cryspy ea_id_data')
+        spec.output('detail_data', valid_type=(EAData, BOData), help='cryspy ea_data')
         spec.output('stat', valid_type=ConfigparserData, help='cryspy_in content')
 
     def call_cryspy_initialize(self):
@@ -79,7 +80,6 @@ class initialize_WorkChain(WorkChain):
             ea_id_node = EAidData(id_data)
             ea_id_node.store()
             self.out('id_data', ea_id_node)
-
             ea_node = EAData(detail_data)
             ea_node.store()
             self.out('detail_data', ea_node)
@@ -88,6 +88,14 @@ class initialize_WorkChain(WorkChain):
             rs_id_node.store()
             self.out('id_data', rs_id_node)
             # not detail_data output
+
+        elif algo == "BO":
+            bo_id_node = BOidData(id_data)
+            bo_id_node.store()
+            self.out('id_data', bo_id_node)
+            bo_node = BOData(detail_data)
+            bo_node.store()
+            self.out('detail_data', bo_node)
         else:
             raise ValueError(f'algo not supported. algo={algo}')
 
