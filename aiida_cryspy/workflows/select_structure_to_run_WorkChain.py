@@ -10,6 +10,7 @@ PandasFrameData = DataFactory('dataframe.frame')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
 EAData = DataFactory('cryspy.ea_data')
 EAidData = DataFactory('cryspy.ea_id_data')
+RSidData = DataFactory('cryspy.rs_id_data')
 ConfigparserData = DataFactory('cryspy.configparser')
 
 
@@ -17,7 +18,7 @@ class select_structure_to_run_WorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input("ea_id_data", valid_type=EAidData, help='ea_id_data.')
+        spec.input("id_data", valid_type=(RSidData, EAidData), help='ea_id_data.')
         spec.input("init_struc", valid_type=StructurecollectionData, help='initial structures.')
         spec.outline(
             cls.select_structures
@@ -25,15 +26,21 @@ class select_structure_to_run_WorkChain(WorkChain):
 
         spec.output("init_struc", valid_type=StructurecollectionData, help='selected initial structures.')
         spec.output("work_path", valid_type=Dict, help='directory to saved results.')
-        spec.output("ea_id_data", valid_type=EAidData)
+        spec.output("id_data", valid_type=(RSidData, EAidData))
 
     def select_structures(self):
-        ea_id_node = self.inputs.ea_id_data
-        structure_node = self.inputs.init_struc
 
-        ea_id_data = ea_id_node.ea_id_data
+        id_node = self.inputs.id_data
+        if isinstance(id_node, EAidData):
+            id_data = id_node.ea_id_data
+            id_queueing = id_data[1]
+        elif isinstance(id_node, RSidData):
+            id_data = id_node.rs_id_data
+            id_queueing = id_data[0]
+
+        structure_node = self.inputs.init_struc
         structures = structure_node.structurecollection
-        id_queueing = ea_id_data[1]
+
         work_path_dic = {}
         structures_dic = {}
         for cid in id_queueing:
@@ -52,6 +59,9 @@ class select_structure_to_run_WorkChain(WorkChain):
         self.out('work_path', d)
 
         id_queueing = []
-        ea_id = EAidData((ea_id_data[0], id_queueing, ea_id_data[2]))
-        ea_id.store()
-        self.out('ea_id_data', ea_id)
+        if isinstance(id_node, EAidData):
+            id_node = EAidData((id_data[0], id_queueing, id_data[2]))
+        elif isinstance(id_node, RSidData):
+            id_node = RSidData((id_queueing, id_data[1]))
+        id_node.store()
+        self.out('id_data', id_node)

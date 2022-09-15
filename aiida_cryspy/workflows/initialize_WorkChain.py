@@ -20,6 +20,7 @@ ConfigparserData = DataFactory('cryspy.configparser')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
 EAData = DataFactory('cryspy.ea_data')
 EAidData = DataFactory('cryspy.ea_id_data')
+RSidData = DataFactory('cryspy.rs_id_data')
 
 
 SIMULATOR_PREFIX = 'simulator_'
@@ -50,17 +51,17 @@ class initialize_WorkChain(WorkChain):
 
         spec.output("init_struc", valid_type=StructurecollectionData, help='initial structures')
         spec.output('rslt_data', valid_type=PandasFrameData, help='summary dataframe')
-        spec.output('ea_id_data', valid_type=EAidData, help='cryspy ea_id_data')
-        spec.output('ea_data', valid_type=EAData, help='cryspy ea_data')
+        spec.output('id_data', valid_type=(RSidData, EAidData), help='cryspy ea_id_data')
+        spec.output('detail_data', valid_type=EAData, help='cryspy ea_data')
         spec.output('stat', valid_type=ConfigparserData, help='cryspy_in content')
 
     def call_cryspy_initialize(self):
         from CrySPY.start import cryspy_init
         if isinstance(self.inputs.cryspy_in, ConfigparserData):
-            init_struc_data, opt_struc_data, stat, rslt_data, ea_id_data, ea_data = cryspy_init.initialize(
+            init_struc_data, opt_struc_data, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
                 self.inputs.cryspy_in.configparser)
         elif isinstance(self.inputs.cryspy_in, Str):
-            init_struc_data, opt_struc_data, stat, rslt_data, ea_id_data, ea_data = cryspy_init.initialize(
+            init_struc_data, opt_struc_data, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
                 self.inputs.cryspy_in.value)
 
         pystructuredict = StructurecollectionData(init_struc_data)
@@ -72,15 +73,24 @@ class initialize_WorkChain(WorkChain):
         rslt_node.store()
         self.out('rslt_data', rslt_node)
 
-        ea_id_node = EAidData(ea_id_data)
-        ea_id_node.store()
-        self.out('ea_id_data', ea_id_node)
+        algo = stat["basic"]["algo"]
 
-        ea_node = EAData(ea_data)
-        ea_node.store()
-        self.out('ea_data', ea_node)
+        if algo == "EA":
+            ea_id_node = EAidData(id_data)
+            ea_id_node.store()
+            self.out('id_data', ea_id_node)
+
+            ea_node = EAData(detail_data)
+            ea_node.store()
+            self.out('detail_data', ea_node)
+        elif algo == "RS":
+            rs_id_node = RSidData(id_data)
+            rs_id_node.store()
+            self.out('id_data', rs_id_node)
+            # not detail_data output
+        else:
+            raise ValueError(f'algo not supported. algo={algo}')
 
         stat = ConfigparserData(stat)
         stat.store()
         self.out('stat', stat)
-        

@@ -10,6 +10,8 @@ PandasFrameData = DataFactory('dataframe.frame')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
 EAData = DataFactory('cryspy.ea_data')
 EAidData = DataFactory('cryspy.ea_id_data')
+RSidData = DataFactory('cryspy.rs_id_data')
+
 ConfigparserData = DataFactory('cryspy.configparser')
 
 
@@ -26,8 +28,8 @@ class next_sg_WorkChain(WorkChain):
         spec.input("initial_structures", valid_type=StructurecollectionData, help='initial structures')
         spec.input("optimized_structures", valid_type=StructurecollectionData, help='optimized structures')
         spec.input("rslt_data", valid_type=PandasFrameData, help='summary data')
-        spec.input("ea_id_data", valid_type=EAidData, help='ea_id_data')
-        spec.input("ea_data", valid_type=EAData, help='ea_data')
+        spec.input("id_data", valid_type=EAidData, help='id_data')
+        spec.input("detail_data", valid_type=EAData, help='detail_data')
         spec.input("stat", valid_type=ConfigparserData, help='cryspy_in content')
         spec.input('cryspy_in', valid_type=(Str, ConfigparserData), help='cryspy_in')
 
@@ -35,8 +37,8 @@ class next_sg_WorkChain(WorkChain):
             cls.call_next_sg
         )
 
-        spec.output('ea_id_data', valid_type=EAidData)
-        spec.output('ea_data', valid_type=EAData)
+        spec.output('id_data', valid_type=EAidData)
+        spec.output('detail_data', valid_type=EAData)
         spec.output('rslt_data', valid_type=PandasFrameData)
         spec.output('initial_structures', valid_type=StructurecollectionData)
         spec.output("stat", valid_type=ConfigparserData)
@@ -46,8 +48,19 @@ class next_sg_WorkChain(WorkChain):
         initial_structures = self.inputs.initial_structures.structurecollection
         opt_struc = self.inputs.optimized_structures.structurecollection
         rslt_data = self.inputs.rslt_data.df
-        ea_id_data = self.inputs.ea_id_data.ea_id_data
-        ea_data = self.inputs.ea_data.ea_data
+
+        id_data = self.inputs.id_data
+        if isinstance(id_data, EAidData):
+            algo = 'EA'
+            id_data = id_data.ea_id_data
+        # the other types are added.
+        else:
+            raise TypeError(f'internal error: unknown type for id_data, type={type(id_data)}')
+        if algo == "EA":
+            detail_data = self.inputs.detail_data.ea_data
+        # the other types are added.
+        else:
+            raise TypeError(f'internal error: unknown type for id_data, type={type(id_data)}')
         stat = self.inputs.stat.configparser
         cryspy_in_node = self.inputs.cryspy_in
         if isinstance(cryspy_in_node, Str):
@@ -59,15 +72,15 @@ class next_sg_WorkChain(WorkChain):
 
         jobs = Ctrl_job(cryspy_in, stat, initial_structures,
                         opt_struc,
-                        rslt_data, ea_id_data,
+                        rslt_data, id_data,
                         )
 
-        stat, ea_id_data, ea_data, rslt_data, init_struc_data = jobs.next_sg(ea_data)
+        stat, id_data, detail_data, rslt_data, init_struc_data = jobs.next_sg(detail_data)
 
-        ea_id_data_node = EAidData(ea_id_data)
-        ea_id_data_node.store()
-        ea_data_node = EAData(ea_data)
-        ea_data_node.store()
+        id_data_node = EAidData(id_data)
+        id_data_node.store()
+        detail_data_node = EAData(detail_data)
+        detail_data_node.store()
         rslt_data_node = PandasFrameData(rslt_data)
         rslt_data_node.store()
         struc_node = StructurecollectionData(init_struc_data)
@@ -75,8 +88,8 @@ class next_sg_WorkChain(WorkChain):
         stat_node = ConfigparserData(stat)
         stat_node.store()
 
-        self.out("ea_id_data", ea_id_data_node)
-        self.out("ea_data", ea_data_node)
+        self.out("id_data", id_data_node)
+        self.out("detail_data", detail_data_node)
         self.out("rslt_data", rslt_data_node)
         self.out('initial_structures', struc_node)
         self.out('stat', stat_node)

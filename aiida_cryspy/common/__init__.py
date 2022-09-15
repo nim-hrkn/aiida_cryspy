@@ -1,1 +1,1 @@
-from .misc import generate_rlst
+from .misc import generate_rlst, merge_structurecollection

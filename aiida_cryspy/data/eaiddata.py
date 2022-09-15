@@ -37,7 +37,7 @@ class EAidData(Dict):
         self._internal_validate(ea_id_data)
         d = {"gen": ea_id_data[0], "id_queueing": ea_id_data[1], "id_running": ea_id_data[2]}
         d_node = self.set_dict(d)
-        return d
+        return d_node
     
     def get_ea_id_data(self) -> list:
         d = self.get_dict()
