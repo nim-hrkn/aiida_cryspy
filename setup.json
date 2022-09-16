@@ -1,6 +1,6 @@
 {
     "name" : "aiida-cryspy",
-    "version" : "0.3.0",
+    "version" : "0.3.1",
     "install_requires": ["aiida-dataframe"],
     "entry_points" : {
         "aiida.workflows": [
