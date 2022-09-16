@@ -3,7 +3,7 @@
 from aiida.plugins import DataFactory
 from aiida.orm import Str
 from aiida.engine import WorkChain
-
+import io
 
 # load types
 StructureData = DataFactory('structure')
@@ -45,13 +45,14 @@ class initialize_WorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input("cryspy_in", valid_type=(Str, ConfigparserData), help='cryspy_in. (temporary implementation)')
+        spec.input("cryspy_in", valid_type=(Str, ConfigparserData, SinglefileData),
+                   help='cryspy_in. (temporary implementation)')
 
         spec.outline(
             cls.call_cryspy_initialize
         )
 
-        spec.output("init_struc", valid_type=StructurecollectionData, help='initial structures')
+        spec.output("initial_structures", valid_type=StructurecollectionData, help='initial structures')
         spec.output('rslt_data', valid_type=PandasFrameData, help='summary dataframe')
         spec.output('id_data', valid_type=(RSidData, EAidData, BOidData), help='cryspy ea_id_data')
         spec.output('detail_data', valid_type=(EAData, BOData), help='cryspy ea_data')
@@ -66,11 +67,18 @@ class initialize_WorkChain(WorkChain):
         elif isinstance(self.inputs.cryspy_in, Str):
             init_struc_data, opt_struc_data, rin, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
                 self.inputs.cryspy_in.value)
+        elif isinstance(self.inputs.cryspy_in, SinglefileData):
+            content = self.inputs.cryspy_in.get_content()
+            with io.StringIO(content) as handle:
+                init_struc_data, opt_struc_data, rin, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
+                    handle)
+        else:
+            raise TypeError(f'unknown type for cryspy_in. type={type(self.inputs.cryspy_in)}')
 
         pystructuredict = StructurecollectionData(init_struc_data)
         pystructuredict.store()
 
-        self.out('init_struc', pystructuredict)
+        self.out('initial_structures', pystructuredict)
 
         rslt_node = PandasFrameData(rslt_data)
         rslt_node.store()

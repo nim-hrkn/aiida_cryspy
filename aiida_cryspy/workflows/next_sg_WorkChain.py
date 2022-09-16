@@ -1,8 +1,8 @@
 
 
-from aiida.engine import WorkChain
+from aiida.engine import WorkChain, calcfunction
 from aiida.plugins import DataFactory
-
+from CrySPY.BO.select_descriptor import select_descriptor
 from CrySPY.job.ctrl_job import Ctrl_job
 
 PandasFrameData = DataFactory('dataframe.frame')
@@ -16,6 +16,24 @@ BOidData = DataFactory('cryspy.bo_id_data')
 
 ConfigparserData = DataFactory('cryspy.configparser')
 RinData = DataFactory('cryspy.rin_data')
+
+
+def _update_bo_data(rin_node, bo_data_node, rslt_data_node, optimized_structures_node):
+    """
+    update descriptors for the optimize structures.
+    """
+    rin = rin_node.rin
+    bo_data = bo_data_node.bo_data
+    opt_dscrpt_data = {}
+    for ID in rslt_data_node.df["Opt"].index:
+        status = rslt_data_node.df["Opt"].loc[ID]
+        # Must be 'status' used?
+        opt_struc = optimized_structures_node.structurecollection[ID]
+        tmp_dscrpt = select_descriptor(rin, {ID: opt_struc})
+        opt_dscrpt_data.update(tmp_dscrpt)
+    opt_dscrpt_data.keys()
+    detail_data_node = BOData((bo_data[0], opt_dscrpt_data, bo_data[3], bo_data[3], bo_data[4]))
+    return detail_data_node
 
 
 class next_sg_WorkChain(WorkChain):
@@ -92,7 +110,11 @@ class next_sg_WorkChain(WorkChain):
             detail_data = self.inputs.detail_data.ea_data
         # algo=="RS" doesn't come to this function.
         elif algo == "BO":
-            detail_data = self.inputs.detail_data.bo_data
+            detail_data_node = _update_bo_data(self.inputs.cryspy_in,
+                                               self.inputs.detail_data,
+                                               self.inputs.rslt_data, 
+                                               self.inputs.optimized_structures)
+            detail_data = detail_data_node.bo_data
         # the other types are added.
         else:
             raise TypeError(f'internal error: unknown type for id_data, type={type(id_data)}')
@@ -107,14 +129,14 @@ class next_sg_WorkChain(WorkChain):
 
         if algo == "BO":
             # BO doesn't increase structures.
-            rin, stat, id_data, detail_data, rslt_data, _ = jobs.next_sg()
+            rin, stat, _, id_data, detail_data, rslt_data = jobs.next_sg()
             id_data_node = BOidData(id_data)
             id_data_node.store()
             detail_data_node = BOData(detail_data)
             detail_data_node.store()
             struc_node = self.inputs.initial_structures  # the same node
         elif algo == "EA":
-            rin, stat, id_data, detail_data, rslt_data, init_struc_data = jobs.next_sg()
+            rin, stat, init_struc_data, id_data, detail_data, rslt_data = jobs.next_sg()
             id_data_node = EAidData(id_data)
             id_data_node.store()
             detail_data_node = EAData(detail_data)

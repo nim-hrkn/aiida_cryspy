@@ -21,12 +21,12 @@ class select_structure_to_run_WorkChain(WorkChain):
     def define(cls, spec):
         super().define(spec)
         spec.input("id_data", valid_type=(RSidData, EAidData, BOidData), help='id_data.')
-        spec.input("init_struc", valid_type=StructurecollectionData, help='initial structures.')
+        spec.input("initial_structures", valid_type=StructurecollectionData, help='initial structures.')
         spec.outline(
             cls.select_structures
         )
 
-        spec.output("init_struc", valid_type=StructurecollectionData, help='selected initial structures.')
+        spec.output("selected_structures", valid_type=StructurecollectionData, help='selected initial structures.')
         spec.output("work_path", valid_type=Dict, help='directory to saved results.')
         spec.output("id_data", valid_type=(RSidData, EAidData, BOidData))
 
@@ -45,7 +45,7 @@ class select_structure_to_run_WorkChain(WorkChain):
         else:
             raise TypeError(f'unknown type for id_node, type={type(id_data)}')
 
-        structure_node = self.inputs.init_struc
+        structure_node = self.inputs.initial_structures
         structures = structure_node.structurecollection
 
         work_path_dic = {}
@@ -59,7 +59,7 @@ class select_structure_to_run_WorkChain(WorkChain):
 
         struc = StructurecollectionData(structures_dic)
         struc.store()
-        self.out('init_struc', struc)
+        self.out('selected_structures', struc)
 
         d = Dict(dict=work_path_dic)
         d.store()
