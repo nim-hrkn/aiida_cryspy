@@ -2,7 +2,6 @@
 
 from aiida.engine import WorkChain
 from aiida.plugins import DataFactory
-from aiida.orm import Str
 
 from CrySPY.job.ctrl_job import Ctrl_job
 
@@ -16,6 +15,7 @@ EAidData = DataFactory('cryspy.ea_id_data')
 BOidData = DataFactory('cryspy.bo_id_data')
 
 ConfigparserData = DataFactory('cryspy.configparser')
+RinData = DataFactory('cryspy.rin_data')
 
 
 class next_sg_WorkChain(WorkChain):
@@ -34,7 +34,7 @@ class next_sg_WorkChain(WorkChain):
         spec.input("id_data", valid_type=(EAidData, BOidData), help='id_data')
         spec.input("detail_data", valid_type=(EAData, BOData), help='detail_data')
         spec.input("stat", valid_type=ConfigparserData, help='cryspy_in content')
-        spec.input('cryspy_in', valid_type=(Str, ConfigparserData), help='cryspy_in')
+        spec.input('cryspy_in', valid_type=RinData, help='cryspy_in')
 
         spec.outline(
             cls.validate_inputdata,
@@ -46,6 +46,7 @@ class next_sg_WorkChain(WorkChain):
         spec.output('rslt_data', valid_type=PandasFrameData)
         spec.output('initial_structures', valid_type=StructurecollectionData)
         spec.output("stat", valid_type=ConfigparserData)
+        spec.output('cryspy_in', valid_type=RinData)
 
     def validate_inputdata(self):
         id_data = self.inputs.id_data
@@ -96,39 +97,30 @@ class next_sg_WorkChain(WorkChain):
         else:
             raise TypeError(f'internal error: unknown type for id_data, type={type(id_data)}')
 
+        rin = self.inputs.cryspy_in.rin
         stat = self.inputs.stat.configparser
-        cryspy_in_node = self.inputs.cryspy_in
-        if isinstance(cryspy_in_node, Str):
-            cryspy_in = cryspy_in_node.value
-        elif isinstance(cryspy_in_node, ConfigparserData):
-            cryspy_in = cryspy_in_node.configparser
-        else:
-            raise TypeError(f'internal error, unknown type of cryspy_in {type(cryspy_in)}')
 
-        jobs = Ctrl_job(cryspy_in, stat, initial_structures,
+        jobs = Ctrl_job(rin, stat, initial_structures,
                         opt_struc,
                         rslt_data, id_data, detail_data
                         )
 
         if algo == "BO":
             # BO doesn't increase structures.
-            stat, id_data, detail_data, rslt_data, _ = jobs.next_sg()
-        else:
-            stat, id_data, detail_data, rslt_data, init_struc_data = jobs.next_sg()
-
-        if algo == "EA":
+            rin, stat, id_data, detail_data, rslt_data, _ = jobs.next_sg()
+            id_data_node = BOidData(id_data)
+            id_data_node.store()
+            detail_data_node = BOData(detail_data)
+            detail_data_node.store()
+            struc_node = self.inputs.initial_structures  # the same node
+        elif algo == "EA":
+            rin, stat, id_data, detail_data, rslt_data, init_struc_data = jobs.next_sg()
             id_data_node = EAidData(id_data)
             id_data_node.store()
             detail_data_node = EAData(detail_data)
             detail_data_node.store()
             struc_node = StructurecollectionData(init_struc_data)
             struc_node.store()
-        elif algo == "BO":
-            id_data_node = BOidData(id_data)
-            id_data_node.store()
-            detail_data_node = BOData(detail_data)
-            detail_data_node.store()
-            struc_node = self.inputs.initial_structures  # the same node
 
         rslt_data_node = PandasFrameData(rslt_data)
         rslt_data_node.store()
@@ -136,8 +128,12 @@ class next_sg_WorkChain(WorkChain):
         stat_node = ConfigparserData(stat)
         stat_node.store()
 
+        rin_node = RinData(rin)
+        rin_node.store()
+
         self.out("id_data", id_data_node)
         self.out("detail_data", detail_data_node)
         self.out("rslt_data", rslt_data_node)
         self.out('initial_structures', struc_node)
         self.out('stat', stat_node)
+        self.out('cryspy_in', rin_node)

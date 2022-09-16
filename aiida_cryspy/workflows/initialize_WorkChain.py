@@ -23,6 +23,7 @@ BOData = DataFactory('cryspy.bo_data')
 EAidData = DataFactory('cryspy.ea_id_data')
 RSidData = DataFactory('cryspy.rs_id_data')
 BOidData = DataFactory('cryspy.bo_id_data')
+RinData = DataFactory('cryspy.rin_data')
 
 SIMULATOR_PREFIX = 'simulator_'
 ID_PREFIX = 'ID_'
@@ -54,15 +55,16 @@ class initialize_WorkChain(WorkChain):
         spec.output('rslt_data', valid_type=PandasFrameData, help='summary dataframe')
         spec.output('id_data', valid_type=(RSidData, EAidData, BOidData), help='cryspy ea_id_data')
         spec.output('detail_data', valid_type=(EAData, BOData), help='cryspy ea_data')
-        spec.output('stat', valid_type=ConfigparserData, help='cryspy_in content')
+        spec.output('stat', valid_type=ConfigparserData, help='modified cryspy_in content')
+        spec.output('cryspy_in', valid_type=RinData, help='cryspy_in content')
 
     def call_cryspy_initialize(self):
         from CrySPY.start import cryspy_init
         if isinstance(self.inputs.cryspy_in, ConfigparserData):
-            init_struc_data, opt_struc_data, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
+            init_struc_data, opt_struc_data, rin, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
                 self.inputs.cryspy_in.configparser)
         elif isinstance(self.inputs.cryspy_in, Str):
-            init_struc_data, opt_struc_data, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
+            init_struc_data, opt_struc_data, rin, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
                 self.inputs.cryspy_in.value)
 
         pystructuredict = StructurecollectionData(init_struc_data)
@@ -102,3 +104,7 @@ class initialize_WorkChain(WorkChain):
         stat = ConfigparserData(stat)
         stat.store()
         self.out('stat', stat)
+
+        cryspy_in = RinData(rin)
+        cryspy_in.store()
+        self.out("cryspy_in", cryspy_in)

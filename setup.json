@@ -17,7 +17,8 @@
             "cryspy.bo_data = aiida_cryspy.data.bodata: BOData",
             "cryspy.ea_id_data = aiida_cryspy.data.eaiddata: EAidData",
             "cryspy.rs_id_data = aiida_cryspy.data.rsiddata: RSidData",
-            "cryspy.bo_id_data = aiida_cryspy.data.boiddata: BOidData"
+            "cryspy.bo_id_data = aiida_cryspy.data.boiddata: BOidData",
+            "cryspy.rin_data = aiida_cryspy.data.rindata: RinData"
         ]
     }
 }
