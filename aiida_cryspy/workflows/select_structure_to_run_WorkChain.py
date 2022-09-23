@@ -9,9 +9,12 @@ from aiida.orm import Dict
 PandasFrameData = DataFactory('dataframe.frame')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
 EAData = DataFactory('cryspy.ea_data')
+LAQAData = DataFactory('cryspy.laqa_data')
+
 EAidData = DataFactory('cryspy.ea_id_data')
 RSidData = DataFactory('cryspy.rs_id_data')
 BOidData = DataFactory('cryspy.bo_id_data')
+LAQAidData = DataFactory('cryspy.laqa_id_data')
 
 ConfigparserData = DataFactory('cryspy.configparser')
 
@@ -20,7 +23,7 @@ class select_structure_to_run_WorkChain(WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input("id_data", valid_type=(RSidData, EAidData, BOidData), help='id_data.')
+        spec.input("id_data", valid_type=(RSidData, EAidData, BOidData, LAQAidData), help='id_data.')
         spec.input("initial_structures", valid_type=StructurecollectionData, help='initial structures.')
         spec.outline(
             cls.select_structures
@@ -28,7 +31,7 @@ class select_structure_to_run_WorkChain(WorkChain):
 
         spec.output("selected_structures", valid_type=StructurecollectionData, help='selected initial structures.')
         spec.output("work_path", valid_type=Dict, help='directory to saved results.')
-        spec.output("id_data", valid_type=(RSidData, EAidData, BOidData))
+        spec.output("id_data", valid_type=(RSidData, EAidData, BOidData, LAQAidData))
 
     def select_structures(self):
 
@@ -42,6 +45,9 @@ class select_structure_to_run_WorkChain(WorkChain):
         elif isinstance(id_node, BOidData):
             id_data = id_node.bo_id_data
             id_queueing = id_data[1]
+        elif isinstance(id_node, LAQAidData):
+            id_data = id_node.laqa_id_data
+            id_queueing = id_data[0]
         else:
             raise TypeError(f'unknown type for id_node, type={type(id_data)}')
 
@@ -72,5 +78,7 @@ class select_structure_to_run_WorkChain(WorkChain):
             id_node = RSidData((id_queueing, id_data[1]))
         elif isinstance(id_node, BOidData):
             id_node = BOidData((id_data[0], id_queueing, id_data[2], id_data[3]))
+        elif isinstance(id_node, LAQAidData):
+            id_node = LAQAidData((id_queueing, id_data[1], id_data[2]))
         id_node.store()
         self.out('id_data', id_node)

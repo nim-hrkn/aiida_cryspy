@@ -1,3 +1,9 @@
+from CrySPY import utility
+import pandas as pd
+import re
+from ase.io.lammpsdata import read_lammps_data
+from ase.io.lammpsrun import read_lammps_dump_text
+import io
 import os
 import numpy as np
 
@@ -18,18 +24,76 @@ SinglefileData = DataFactory('singlefile')
 ArrayData = DataFactory('array')
 LammpsPotential = DataFactory('lammps.potential')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
-
+LAQAStepData = DataFactory('cryspy.laqa_step_data')
 
 
 SIMULATOR_PREFIX = 'simulator_'
 ID_PREFIX = 'ID_'
 
 
+def _opt_result_to_step_data(trajectory_data, retrieved, log_filename='log.lammps', tolist=True):
+    """
+    parse opt_result to get *_step_data.
+
+    Note:
+    1. force_step_data is obtained from tarjectory data.
+    2. energy_step_data and stress_step_data are obtained from lammps log file in the retrieved folder.
+    Therefore, the number of steps may be different between force_step_data and {energy|stress}_step_data.
+
+    Args:
+        trajectory_data (LammpsTrajectory): lammps trajectory data.
+        retrieved (FolderData): lammps.optimize retrieved folder.
+
+    Returns:
+        Tuple containing,
+        list: energy_step_data.
+        list: force_step_data.
+        list: stress_step_data.
+    """
+    force_step_data = []
+    for step in trajectory_data.time_steps:
+        traj_block = trajectory_data.get_step_string(step)
+        with io.StringIO(traj_block) as handle:
+            lammps_traj = read_lammps_dump_text(handle)
+        force = lammps_traj.get_forces()
+        natot = len(lammps_traj.get_atomic_numbers())
+        if tolist:
+            force = force.tolist()
+        force_step_data.append(force)
+
+    content = retrieved.get_object_content(log_filename).splitlines()
+    lines = iter(content)
+    while True:
+        line = next(lines)
+        if line.startswith('Step Temp Press TotEng '):
+            columns = re.split(' +', line.strip())
+            break
+    values = []
+    while True:
+        line = next(lines)
+        if line.startswith('Loop time of'):
+            break
+        value = re.split(' +', line.strip())
+        values.append(value)
+    df = pd.DataFrame(values, columns=columns)
+
+    energy_step_data = df["TotEng"].astype(float).values/natot
+    if tolist:
+        energy_step_data = energy_step_data.tolist()
+
+    stress_columns = ['Pxx', 'Pxy', 'Pxz', 'Pxy', 'Pyy', 'Pyz',  'Pxz', 'Pyz', 'Pzz']
+    stress_step_data = df[stress_columns].astype(float).values * 1.0e-3 * utility.kbar2ev_ang3
+    if tolist:
+        stress_step_data = stress_step_data.tolist()
+
+    return {'energy': energy_step_data, 'force': force_step_data, 'stress': stress_step_data}
+
+
 @calcfunction
 def _pack_Structure_to_StructurecollectionData(**kwargs):
     final_structures = {}
     for label, structure in kwargs.items():
-        ID = label.replace(SIMULATOR_PREFIX,"")
+        ID = label.replace(SIMULATOR_PREFIX, "")
         ID = int(ID)
         final_structures[ID] = structure.get_pymatgen()
     return StructurecollectionData(final_structures)
@@ -81,6 +145,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
         )
         spec.output("results", valid_type=Dict)
         spec.output("final_structures", valid_type=StructurecollectionData, help='optimized structures')
+        spec.output('step_data', valid_type=LAQAStepData, help='data during optimization')
 
     def submit_workchains(self):
         initial_structures_dict = self.inputs.initial_structures.structurecollection
@@ -131,8 +196,8 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
         structure_id_list = set(structure_id_list)
         calculations_id_list = set(calculations_id_list)
         if structure_id_list != calculations_id_list:
-            print("calculations_id_list",calculations_id_list)
-            print("structure_id_list",structure_id_list)
+            print("calculations_id_list", calculations_id_list)
+            print("structure_id_list", structure_id_list)
             raise ValueError('inconsistent ID')
 
         # retrieve all the files
@@ -195,3 +260,15 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
         final_structures = _pack_Structure_to_StructurecollectionData(**structures)
 
         self.out('final_structures', final_structures)
+
+        # step_data
+        step_data = {}
+        for key in calculations:
+            if key.startswith(SIMULATOR_PREFIX):
+                ID = key.replace(SIMULATOR_PREFIX, "")
+                step_data[ID] = _opt_result_to_step_data(calculations[key].outputs.trajectory_data,
+                                                         calculations[key].outputs.retrieved)
+        step_data_node = LAQAStepData(step_data)
+        step_data_node.store()
+
+        self.out('step_data', step_data_node)

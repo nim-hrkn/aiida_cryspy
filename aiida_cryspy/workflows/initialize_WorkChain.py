@@ -18,12 +18,18 @@ PandasFrameData = DataFactory('dataframe.frame')
 
 ConfigparserData = DataFactory('cryspy.configparser')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
+
 EAData = DataFactory('cryspy.ea_data')
 BOData = DataFactory('cryspy.bo_data')
+LAQAData = DataFactory('cryspy.laqa_data')
+
 EAidData = DataFactory('cryspy.ea_id_data')
 RSidData = DataFactory('cryspy.rs_id_data')
 BOidData = DataFactory('cryspy.bo_id_data')
+LAQAidData = DataFactory('cryspy.laqa_id_data')
+
 RinData = DataFactory('cryspy.rin_data')
+
 
 SIMULATOR_PREFIX = 'simulator_'
 ID_PREFIX = 'ID_'
@@ -54,8 +60,8 @@ class initialize_WorkChain(WorkChain):
 
         spec.output("initial_structures", valid_type=StructurecollectionData, help='initial structures')
         spec.output('rslt_data', valid_type=PandasFrameData, help='summary dataframe')
-        spec.output('id_data', valid_type=(RSidData, EAidData, BOidData), help='cryspy ea_id_data')
-        spec.output('detail_data', valid_type=(EAData, BOData), help='cryspy ea_data')
+        spec.output('id_data', valid_type=(RSidData, EAidData, BOidData, LAQAidData), help='cryspy ea_id_data')
+        spec.output('detail_data', valid_type=(EAData, BOData, LAQAData), help='cryspy ea_data')
         spec.output('stat', valid_type=ConfigparserData, help='modified cryspy_in content')
         spec.output('cryspy_in', valid_type=RinData, help='cryspy_in content')
 
@@ -98,7 +104,6 @@ class initialize_WorkChain(WorkChain):
             rs_id_node.store()
             self.out('id_data', rs_id_node)
             # not detail_data output
-
         elif algo == "BO":
             bo_id_node = BOidData(id_data)
             bo_id_node.store()
@@ -106,6 +111,13 @@ class initialize_WorkChain(WorkChain):
             bo_node = BOData(detail_data)
             bo_node.store()
             self.out('detail_data', bo_node)
+        elif algo == "LAQA":
+            laqa_id_node = LAQAidData(id_data)
+            laqa_id_node.store()
+            self.out('id_data', laqa_id_node)
+            laqa_node = LAQAData(({}, {}))
+            laqa_node.store()
+            self.out('detail_data', laqa_node)
         else:
             raise ValueError(f'algo not supported. algo={algo}')
 
