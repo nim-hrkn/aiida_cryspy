@@ -8,9 +8,9 @@ authors = [{name = "Hiori Kino", email = "kino.hiori@nims.go.jp"}]
 readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = [
-    "License :: OSI Approved :: Apache Software License",
-    'Development Status :: 3.1 - Alpha',
-    "Framework :: AiiDA"
+    "License ::OSI Approved ::Apache Software License",
+    'Development Status ::3.1 - Alpha',
+    "Framework ::AiiDA"
 ]
 
 dynamic = ["version", "description"]
@@ -32,17 +32,19 @@ Home = "https://github.com/nim-hrkn/aiida_cryspy"
 Documentation = "https://github.com/nim-hrkn/aiida_cryspy"
 
 [project.entry-points."aiida.data"]
-"cryspy.structurecollection" = "aiida_cryspy.data.structurecollectiondata: StructureCollectionData"
-"cryspy.configparser" = "aiida_cryspy.data.configparserdata: ConfigParserData"
-"cryspy.dataframe" = "aiida_cryspy.data.dataframedata: DataframeData"
-"cryspy.ea_data" = "aiida_cryspy.data.eadata: EAData"
-"cryspy.bo_data" = "aiida_cryspy.data.bodata: BOData"
-"cryspy.ea_id_data" = "aiida_cryspy.data.eaiddata: EAidData"
-"cryspy.rs_id_data" = "aiida_cryspy.data.rsiddata: RSidData"
-"cryspy.bo_id_data" = "aiida_cryspy.data.boiddata: BOidData"
+"cryspy.structurecollection" = "aiida_cryspy.data.structurecollectiondata:StructureCollectionData"
+"cryspy.configparser" = "aiida_cryspy.data.configparserdata:ConfigParserData"
+"cryspy.dataframe" = "aiida_cryspy.data.dataframedata:DataframeData"
+"cryspy.laqa_data" = "aiida_cryspy.data.laqadata:LAQAData"
+"cryspy.ea_data" = "aiida_cryspy.data.eadata:EAData"
+"cryspy.bo_data" = "aiida_cryspy.data.bodata:BOData"
+"cryspy.laqa_id_data" = "aiida_cryspy.data.laqaiddata:LAQAidData"
+"cryspy.ea_id_data" = "aiida_cryspy.data.eaiddata:EAidData"
+"cryspy.rs_id_data" = "aiida_cryspy.data.rsiddata:RSidData"
+"cryspy.bo_id_data" = "aiida_cryspy.data.boiddata:BOidData"
 
 [project.entry-points."aiida.workflows"]
-"cryspy.initial_structures" = "aiida_cryspy.workflows.initialize_WorkChain: initialize_WorkChain"
-"cryspy.optimize_structures_lammps" = "aiida_cryspy.workflows.optimization_simulator_lammps_WorkChain: optimization_simulator_lammps_WorkChain"
-"cryspy.next_sg" = "aiida_cryspy.workflows.next_sg_WorkChain: next_sg_WorkChain"
-"cryspy.select_structures" = "aiida_cryspy.workflows.select_structure_to_run_WorkChain: select_structure_to_run_WorkChain"
+"cryspy.initial_structures" = "aiida_cryspy.workflows.initialize_WorkChain:initialize_WorkChain"
+"cryspy.optimize_structures_lammps" = "aiida_cryspy.workflows.optimization_simulator_lammps_WorkChain:optimization_simulator_lammps_WorkChain"
+"cryspy.next_sg" = "aiida_cryspy.workflows.next_sg_WorkChain:next_sg_WorkChain"
+"cryspy.select_structures" = "aiida_cryspy.workflows.select_structure_to_run_WorkChain:select_structure_to_run_WorkChain"
