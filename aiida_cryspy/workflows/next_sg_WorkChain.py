@@ -4,6 +4,9 @@ from CrySPY.BO.select_descriptor import select_descriptor
 from CrySPY.job.ctrl_job import Ctrl_job
 from CrySPY.LAQA.calc_score import calc_laqa_bias
 
+import numpy as np
+import pandas as pd
+
 PandasFrameData = DataFactory('dataframe.frame')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
 
@@ -78,7 +81,7 @@ def _extract_laqa_score(laqa_df):
 def _update_step_data(laqa_data_node, step_data_node):
     step_data = laqa_data_node.laqa_data[0]
     new_step_data = step_data_node.step_data
-    for key,value in new_step_data.items():
+    for key, value in new_step_data.items():
         step_data.update({key: value})
     return step_data
 
@@ -196,7 +199,8 @@ class next_sg_WorkChain(WorkChain):
         elif algo == 'LAQA':
             step_data_node = self.inputs.step_data
             detail_data_node = self.inputs.detail_data
-            detail_data_node, df_laqa_score = _generate_laqa_data(self.inputs.cryspy_in, detail_data_node, step_data_node)
+            detail_data_node, df_laqa_score = _generate_laqa_data(
+                self.inputs.cryspy_in, detail_data_node, step_data_node)
             detail_data_node.store()
             # df_laqa_score.store()
         else:
