@@ -125,7 +125,6 @@ class next_sg_WorkChain(WorkChain):
         spec.input("id_data", valid_type=(EAidData, BOidData, LAQAidData), help='id_data')
         spec.input('step_data', valid_type=LAQAStepData, required=False, help='optimization step data')
         spec.input("detail_data", valid_type=(EAData, BOData, LAQAData), help='detail_data')
-        spec.input("stat", valid_type=ConfigparserData, help='cryspy_in content')
         spec.input('cryspy_in', valid_type=RinData, help='cryspy_in')
 
         spec.outline(
@@ -137,7 +136,6 @@ class next_sg_WorkChain(WorkChain):
         spec.output('detail_data', valid_type=(EAData, BOData, LAQAData))
         spec.output('rslt_data', valid_type=PandasFrameData)
         spec.output('initial_structures', valid_type=StructurecollectionData)
-        spec.output("stat", valid_type=ConfigparserData)
         spec.output('cryspy_in', valid_type=RinData)
 
     def validate_inputdata(self):
@@ -207,26 +205,25 @@ class next_sg_WorkChain(WorkChain):
             raise TypeError(f'internal error: unknown type for id_data, type={type(id_data)}')
 
         rin = self.inputs.cryspy_in.rin
-        stat = self.inputs.stat.configparser
 
         if algo == "BO":
             # BO doesn't increase structures.
-            jobs = Ctrl_job(rin, stat, initial_structures,
+            jobs = Ctrl_job(rin, initial_structures,
                             opt_struc,
                             rslt_data, id_data, detail_data
                             )
-            rin, stat, _, id_data, detail_data, rslt_data = jobs.next_sg()
+            rin, _, id_data, detail_data, rslt_data = jobs.next_sg()
             id_data_node = BOidData(id_data)
             id_data_node.store()
             detail_data_node = BOData(detail_data)
             detail_data_node.store()
             struc_node = self.inputs.initial_structures  # the same node
         elif algo == "EA":
-            jobs = Ctrl_job(rin, stat, initial_structures,
+            jobs = Ctrl_job(rin, initial_structures,
                             opt_struc,
                             rslt_data, id_data, detail_data
                             )
-            rin, stat, init_struc_data, id_data, detail_data, rslt_data = jobs.next_sg()
+            rin, init_struc_data, id_data, detail_data, rslt_data = jobs.next_sg()
             id_data_node = EAidData(id_data)
             id_data_node.store()
             detail_data_node = EAData(detail_data)
@@ -242,9 +239,6 @@ class next_sg_WorkChain(WorkChain):
         rslt_data_node = PandasFrameData(rslt_data)
         rslt_data_node.store()
 
-        stat_node = ConfigparserData(stat)
-        stat_node.store()
-
         rin_node = RinData(rin)
         rin_node.store()
 
@@ -252,5 +246,4 @@ class next_sg_WorkChain(WorkChain):
         self.out("detail_data", detail_data_node)
         self.out("rslt_data", rslt_data_node)
         self.out('initial_structures', struc_node)
-        self.out('stat', stat_node)
         self.out('cryspy_in', rin_node)
