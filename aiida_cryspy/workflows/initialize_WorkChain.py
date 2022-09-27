@@ -62,21 +62,21 @@ class initialize_WorkChain(WorkChain):
         spec.output('rslt_data', valid_type=PandasFrameData, help='summary dataframe')
         spec.output('id_data', valid_type=(RSidData, EAidData, BOidData, LAQAidData), help='cryspy ea_id_data')
         spec.output('detail_data', valid_type=(EAData, BOData, LAQAData), help='cryspy ea_data')
-        spec.output('stat', valid_type=ConfigparserData, help='modified cryspy_in content')
+        # spec.output('stat', valid_type=ConfigparserData, help='modified cryspy_in content')
         spec.output('cryspy_in', valid_type=RinData, help='cryspy_in content')
 
     def call_cryspy_initialize(self):
         from CrySPY.start import cryspy_init
         if isinstance(self.inputs.cryspy_in, ConfigparserData):
-            init_struc_data, opt_struc_data, rin, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
+            init_struc_data, opt_struc_data, rin, slt_data, id_data, detail_data = cryspy_init.initialize(
                 self.inputs.cryspy_in.configparser)
         elif isinstance(self.inputs.cryspy_in, Str):
-            init_struc_data, opt_struc_data, rin, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
+            init_struc_data, opt_struc_data, rin, rslt_data, id_data, detail_data = cryspy_init.initialize(
                 self.inputs.cryspy_in.value)
         elif isinstance(self.inputs.cryspy_in, SinglefileData):
             content = self.inputs.cryspy_in.get_content()
             with io.StringIO(content) as handle:
-                init_struc_data, opt_struc_data, rin, stat, rslt_data, id_data, detail_data = cryspy_init.initialize(
+                init_struc_data, opt_struc_data, rin, rslt_data, id_data, detail_data = cryspy_init.initialize(
                     handle)
         else:
             raise TypeError(f'unknown type for cryspy_in. type={type(self.inputs.cryspy_in)}')
@@ -90,7 +90,8 @@ class initialize_WorkChain(WorkChain):
         rslt_node.store()
         self.out('rslt_data', rslt_node)
 
-        algo = stat["basic"]["algo"]
+        # algo = stat["basic"]["algo"]
+        algo = rin.algo
 
         if algo == "EA":
             ea_id_node = EAidData(id_data)
@@ -120,10 +121,6 @@ class initialize_WorkChain(WorkChain):
             self.out('detail_data', laqa_node)
         else:
             raise ValueError(f'algo not supported. algo={algo}')
-
-        stat = ConfigparserData(stat)
-        stat.store()
-        self.out('stat', stat)
 
         cryspy_in = RinData(rin)
         cryspy_in.store()

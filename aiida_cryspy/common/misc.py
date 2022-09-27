@@ -15,7 +15,8 @@ RSidData = DataFactory('cryspy.rs_id_data')
 BOidData = DataFactory('cryspy.bo_id_data')
 LAQAidData = DataFactory('cryspy.laqa_id_data')
 
-ConfigparserData = DataFactory('cryspy.configparser')
+# ConfigparserData = DataFactory('cryspy.configparser')
+RinData = DataFactory('cryspy.rin_data')
 
 
 @calcfunction
@@ -24,11 +25,12 @@ def generate_rlst(all_initial_structures_node: StructurecollectionData,
                   optimize_result: Dict,
                   id_data_node: Union[RSidData, EAidData, BOidData],
                   rslt_data_node: PandasFrameData,
-                  stat_node: ConfigparserData):
+                  rin_node: RinData):
     init_struc_data = all_initial_structures_node.structurecollection
     opt_struc = all_optimized_structures_node.structurecollection
     opt_results = optimize_result.get_dict()
     rslt_data = rslt_data_node.df
+    rin = rin_node.rin
     if isinstance(id_data_node, EAidData):
         gen = id_data_node.ea_id_data[0]
         algo = "EA"
@@ -46,8 +48,7 @@ def generate_rlst(all_initial_structures_node: StructurecollectionData,
     magmon = None
     check_opt = 'done'
 
-    stat = stat_node.configparser
-    symprec = float(stat["structure"]["symprec"])
+    symprec = rin.symprec
 
     for i, energy in zip(opt_results["index"], opt_results["energy"]):
 
