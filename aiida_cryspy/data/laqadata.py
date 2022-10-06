@@ -1,6 +1,7 @@
 import pickle
 import io
 from aiida.plugins import DataFactory
+from numpy import savez_compressed
 SinglefileData = DataFactory('singlefile')
 
 
@@ -31,7 +32,6 @@ class LAQAData(SinglefileData):
         if laqa_data[1] is not None:
             if not isinstance(laqa_data[1], dict):
                 raise TypeError('laqa_data[0] must be dict')
-
 
     def get_laqa_data(self):
         with self.open(mode='rb') as handle:

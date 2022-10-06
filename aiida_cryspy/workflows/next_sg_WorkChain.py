@@ -18,7 +18,7 @@ EAidData = DataFactory('cryspy.ea_id_data')
 BOidData = DataFactory('cryspy.bo_id_data')
 LAQAidData = DataFactory('cryspy.laqa_id_data')
 
-LAQAStepData = DataFactory('cryspy.laqa_step_data')
+StepData = DataFactory('cryspy.step_data')
 
 
 ConfigparserData = DataFactory('cryspy.configparser')
@@ -78,17 +78,9 @@ def _extract_laqa_score(laqa_df):
     return laqa_score
 
 
-def _update_step_data(laqa_data_node, step_data_node):
-    step_data = laqa_data_node.laqa_data[0]
-    new_step_data = step_data_node.step_data
-    for key, value in new_step_data.items():
-        step_data.update({key: value})
-    return step_data
-
-
 def _generate_laqa_data(rin_node, laqa_data_node, step_data_node):
     rin = rin_node.rin
-    updated_step_data = _update_step_data(laqa_data_node, step_data_node)
+    updated_step_data = step_data_node.step_data
     laqa_df = _calculate_laqa_scores(updated_step_data, rin.wf_laqa, rin.ws_laqa)
     laqa_score = _extract_laqa_score(laqa_df)
     laqa_node = LAQAData((updated_step_data, laqa_score))
@@ -123,7 +115,7 @@ class next_sg_WorkChain(WorkChain):
         spec.input("optimized_structures", valid_type=StructurecollectionData, help='optimized structures')
         spec.input("rslt_data", valid_type=PandasFrameData, help='summary data')
         spec.input("id_data", valid_type=(EAidData, BOidData, LAQAidData), help='id_data')
-        spec.input('step_data', valid_type=LAQAStepData, required=False, help='optimization step data')
+        spec.input('step_data', valid_type=StepData, required=False, help='optimization step data')
         spec.input("detail_data", valid_type=(EAData, BOData, LAQAData), help='detail_data')
         spec.input('cryspy_in', valid_type=RinData, help='cryspy_in')
 
@@ -137,6 +129,7 @@ class next_sg_WorkChain(WorkChain):
         spec.output('rslt_data', valid_type=PandasFrameData)
         spec.output('initial_structures', valid_type=StructurecollectionData)
         spec.output('cryspy_in', valid_type=RinData)
+        spec.output('step_data', valid_type=StepData, required=False, help='optimization step data')
 
     def validate_inputdata(self):
         id_data = self.inputs.id_data
@@ -171,6 +164,11 @@ class next_sg_WorkChain(WorkChain):
         rslt_data = self.inputs.rslt_data.df
         algo = self.ctx.algo
 
+        try:
+            step_data_node = self.inputs.step_data
+        except Exception:
+            step_data_node = None
+             
         id_data = self.inputs.id_data
         if isinstance(id_data, EAidData):
             algo = 'EA'
@@ -195,7 +193,6 @@ class next_sg_WorkChain(WorkChain):
                                                self.inputs.optimized_structures)
             detail_data = detail_data_node.bo_data
         elif algo == 'LAQA':
-            step_data_node = self.inputs.step_data
             detail_data_node = self.inputs.detail_data
             detail_data_node, df_laqa_score = _generate_laqa_data(
                 self.inputs.cryspy_in, detail_data_node, step_data_node)
@@ -247,3 +244,5 @@ class next_sg_WorkChain(WorkChain):
         self.out("rslt_data", rslt_data_node)
         self.out('initial_structures', struc_node)
         self.out('cryspy_in', rin_node)
+        if step_data_node is not None:
+            self.out('step_data', step_data_node)

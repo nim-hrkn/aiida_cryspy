@@ -3,9 +3,11 @@ import pandas as pd
 from aiida.engine import WorkChain
 from aiida.plugins import DataFactory
 import numpy as np
+from aiida.engine import calcfunction
+
 
 RinData = DataFactory('cryspy.rin_data')
-LAQAStepData = DataFactory('cryspy.laqa_step_data')
+StepData = DataFactory('cryspy.step_data')
 PandasFrameData = DataFactory('dataframe.frame')
 LAQAData = DataFactory('cryspy.laqa_data')
 LAQAidData = DataFactory('cryspy.laqa_id_data')
@@ -17,7 +19,7 @@ def _calculate_laqa_scores(step_data_node, wf_laqa=1.0, ws_laqa=1.0):
     calculate -energy + wf_laqa* force_bias + ws_lawa * stress.
 
     Args:
-        step_data_node (LAQAStepData): history data of energy, force and stresses.
+        step_data_node (StepData): history data of energy, force and stresses.
         wf_laqa (float): force factor.
         ws_laqa (float): stress factor.
     """
@@ -64,7 +66,7 @@ class generatte_laqa_data_WorkChain(WorkChain):
     def define(cls, spec):
         super().define(spec)
         spec.input('cryspy_in', valid_type=RinData, help='parsed cryspy_in content.')
-        spec.input('step_data', valid_type=LAQAStepData, help='step data.')
+        spec.input('step_data', valid_type=StepData, help='step data.')
         spec.outline(cls.generate_laqa_data)
         spec.output('laqa_data', valid_type=LAQAData, help='LAQA data.')
         spec.output('laqa_summary', valid_type=PandasFrameData, help='laqa summary as dataframe.')

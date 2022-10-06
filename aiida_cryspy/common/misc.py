@@ -14,9 +14,22 @@ EAidData = DataFactory('cryspy.ea_id_data')
 RSidData = DataFactory('cryspy.rs_id_data')
 BOidData = DataFactory('cryspy.bo_id_data')
 LAQAidData = DataFactory('cryspy.laqa_id_data')
+StepData = DataFactory('cryspy.step_data')
 
 # ConfigparserData = DataFactory('cryspy.configparser')
 RinData = DataFactory('cryspy.rin_data')
+
+
+
+
+@calcfunction
+def update_step_data(step_data_node, new_step_data_node):
+    step_data = step_data_node.step_data
+    new_step_data = new_step_data_node.step_data
+    for key, value in new_step_data.items():
+        step_data.update({key: value})
+    return StepData(step_data)
+
 
 
 @calcfunction

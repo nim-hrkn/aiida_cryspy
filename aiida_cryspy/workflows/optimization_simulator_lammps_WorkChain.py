@@ -24,7 +24,7 @@ SinglefileData = DataFactory('singlefile')
 ArrayData = DataFactory('array')
 LammpsPotential = DataFactory('lammps.potential')
 StructurecollectionData = DataFactory('cryspy.structurecollection')
-LAQAStepData = DataFactory('cryspy.laqa_step_data')
+StepData = DataFactory('cryspy.step_data')
 
 
 SIMULATOR_PREFIX = 'simulator_'
@@ -145,7 +145,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
         )
         spec.output("results", valid_type=Dict)
         spec.output("final_structures", valid_type=StructurecollectionData, help='optimized structures')
-        spec.output('step_data', valid_type=LAQAStepData, help='data during optimization')
+        spec.output('step_data', valid_type=StepData, help='data during optimization')
 
     def submit_workchains(self):
         initial_structures_dict = self.inputs.initial_structures.structurecollection
@@ -221,20 +221,6 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
                     with open(filepath, "wb") as f:
                         f.write(content)
 
-        if False:
-            # change stat_job
-            for _ID, struc_dict in initial_structures_dict.items():
-                cwd = cwd_dict[str(_ID)]
-                os.makedirs(cwd, exist_ok=True)
-                filepath = os.path.join(cwd, 'stat_job')
-                with open(filepath, "r") as f:
-                    content = f.read().splitlines()
-
-                content2 = [content[0], content[1]]
-                content2.append('done')
-                with open(filepath, "w") as f:
-                    f.write("\n".join(content2))
-
         # process parsed items
         results = {}
         for key in calculations:
@@ -268,7 +254,7 @@ class optimization_simulator_lammps_WorkChain(WorkChain):
                 ID = key.replace(SIMULATOR_PREFIX, "")
                 step_data[ID] = _opt_result_to_step_data(calculations[key].outputs.trajectory_data,
                                                          calculations[key].outputs.retrieved)
-        step_data_node = LAQAStepData(step_data)
+        step_data_node = StepData(step_data)
         step_data_node.store()
 
         self.out('step_data', step_data_node)

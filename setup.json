@@ -20,7 +20,7 @@
             "cryspy.rs_id_data = aiida_cryspy.data.rsiddata: RSidData",
             "cryspy.bo_id_data = aiida_cryspy.data.boiddata: BOidData",
             "cryspy.laqa_id_data = aiida_cryspy.data.laqaiddata: LAQAidData",
-            "cryspy.laqa_step_data = aiida_cryspy.data.laqastepdata: LAQAStepData",
+            "cryspy.step_data = aiida_cryspy.data.laqastepdata: LAQAStepData",
             "cryspy.rin_data = aiida_cryspy.data.rindata: RinData"
         ]
     }
