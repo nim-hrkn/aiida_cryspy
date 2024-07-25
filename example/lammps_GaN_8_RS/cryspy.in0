@@ -1,0 +1,36 @@
+[basic]
+algo = RS
+calc_code = LAMMPS
+tot_struc = 20
+nstage = 1
+njob = 20
+jobcmd = bash
+jobfile = job_cryspy
+
+[structure]
+natot = 8
+atype = Ga N
+nat = 4 4
+
+[LAMMPS]
+lammps_infile = in.lammps
+lammps_outfile = out.lammps
+lammps_data = structure.data
+lammps_potential = GaN.tersoff
+
+[RS]
+n_pop = 20
+n_crsov = 10
+n_perm = 3
+n_strain = 5
+n_rand = 2
+n_elite = 3
+n_fittest = 10
+slct_func = TNM
+t_size = 2
+maxgen_ea = 7
+mindist_ea_1 = 2.0 1.0
+mindist_ea_2 = 1.0 2.0
+
+[option]
+

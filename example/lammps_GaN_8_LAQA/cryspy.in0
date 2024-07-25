@@ -1,0 +1,26 @@
+[basic]
+algo = LAQA
+calc_code = LAMMPS
+tot_struc = 12
+nstage = 1
+njob = 12
+jobcmd = bash
+jobfile = job_cryspy
+
+[structure]
+natot = 8
+atype = Ga N
+nat = 4 4
+
+[LAMMPS]
+lammps_infile = in.lammps
+lammps_outfile = out.lammps
+lammps_data = structure.data
+lammps_potential = GaN.tersoff
+
+[LAQA]
+nselect_laqa = 4
+
+
+[option]
+
